@@ -1,9 +1,6 @@
 use bevy::{mesh::RectangleMeshBuilder, prelude::*};
 
-use crate::game_plugin::game_world_plugin::{
-    Ground,
-    buildings::building::{Building, BuildingType},
-};
+use crate::buildings::building::{Building, BuildingType};
 
 #[derive(Message)]
 pub struct PlaceBuilding {
@@ -61,7 +58,6 @@ pub fn init_buildings(mut place_building_writer: MessageWriter<PlaceBuilding>) {
 
 fn place_buildings(
     mut commands: Commands,
-    ground: Single<&GlobalTransform, With<Ground>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
@@ -76,11 +72,9 @@ fn place_buildings(
         let mesh = meshes.add(RectangleMeshBuilder::new(width, height));
         let material = materials.add(Color::linear_rgb(0.0, 0.0, 0.0));
 
-        let ground_translation = ground.translation();
-
         commands.spawn((
             Visibility::Visible,
-            Transform::from_translation(ground_translation + Vec3::new(0.0, height / 2.0, 0.0)),
+            Transform::from_translation(Vec3::new(0.0, height / 2.0, 0.0)),
             children![(
                 building,
                 children![(

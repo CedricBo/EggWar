@@ -2,15 +2,12 @@ use std::sync::LazyLock;
 
 use bevy::{
     app::{Plugin, Startup, Update},
-    asset::Assets,
     camera::Camera2d,
     ecs::{
         query::With,
-        system::{Commands, Res, ResMut, Single},
+        system::{Commands, Res, Single},
     },
     input::{ButtonInput, keyboard::Key},
-    mesh::Mesh,
-    sprite_render::ColorMaterial,
     transform::components::Transform,
 };
 
@@ -24,11 +21,7 @@ impl Plugin for CameraPlugin {
     }
 }
 
-fn init_camera(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
+fn init_camera(mut commands: Commands) {
     commands.spawn(Camera2d);
 }
 

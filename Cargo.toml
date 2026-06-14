@@ -6,6 +6,12 @@ edition = "2024"
 [dependencies]
 bevy = { version = "0.18.1", features = ["2d", "dynamic_linking"] }
 
+
+[lib]
+name="lib"
+path="src/lib/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
 opt-level = 1

@@ -7,7 +7,7 @@ pub struct Building {
     path: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Hash, Debug, Eq, PartialEq)]
 pub enum BuildingType {
     Grange,
     Garden,

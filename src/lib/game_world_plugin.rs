@@ -15,9 +15,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::{common::Size, game_plugin::game_world_plugin::buildings::plugins::init_buildings};
-
-mod buildings;
+use crate::buildings::{self, plugins::init_buildings};
 
 #[derive(Component)]
 pub struct Ground;
@@ -37,12 +35,9 @@ fn init_ground(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let size = Size {
-        width: 10000.0,
-        height: 50.0,
-    };
+    let size = (10000.0, 50.0);
 
-    let mesh = meshes.add(RectangleMeshBuilder::new(size.width, size.height));
+    let mesh = meshes.add(RectangleMeshBuilder::new(size.0, size.1));
 
     let material = materials.add(Color::linear_rgb(38.0 / 255.0, 153.0 / 255.0, 0.0 / 255.0));
 
@@ -53,7 +48,7 @@ fn init_ground(
         children![(
             Mesh2d(mesh),
             MeshMaterial2d(material),
-            Transform::from_translation(Vec3::new(0.0, -size.height / 2.0, 0.0)),
+            Transform::from_translation(Vec3::new(0.0, -size.1 / 2.0, 0.0)),
         )],
     ));
 }
