@@ -1,7 +1,17 @@
 use std::sync::LazyLock;
 
 use bevy::{
-    app::{Plugin, Startup, Update}, asset::Assets, camera::Camera2d, color::Color, ecs::{query::With, system::{Commands, Query, Res, ResMut, Single}}, input::{ButtonInput, keyboard::{Key, KeyCode}}, mesh::{CircleMeshBuilder, Mesh, Mesh2d}, sprite_render::{ColorMaterial, MeshMaterial2d}, transform::components::Transform
+    app::{Plugin, Startup, Update},
+    asset::Assets,
+    camera::Camera2d,
+    ecs::{
+        query::With,
+        system::{Commands, Res, ResMut, Single},
+    },
+    input::{ButtonInput, keyboard::Key},
+    mesh::Mesh,
+    sprite_render::ColorMaterial,
+    transform::components::Transform,
 };
 
 pub struct CameraPlugin;
@@ -24,7 +34,7 @@ fn init_camera(
 
 fn move_camera(
     keyboard_inputs: Res<ButtonInput<Key>>,
-    mut camera_transform: Single<&mut Transform, With<Camera2d>>
+    mut camera_transform: Single<&mut Transform, With<Camera2d>>,
 ) {
     let mut camera_translation = camera_transform.translation;
 
@@ -33,23 +43,19 @@ fn move_camera(
     static LEFT_KEY: LazyLock<Key> = LazyLock::new(|| Key::Character("q".into()));
     static RIGHT_KEY: LazyLock<Key> = LazyLock::new(|| Key::Character("d".into()));
 
-    if keyboard_inputs.pressed(UP_KEY.clone())
-    {
+    if keyboard_inputs.pressed(UP_KEY.clone()) {
         camera_translation.y += 1.0;
     }
 
-    if keyboard_inputs.pressed(DOWN_KEY.clone())
-    {
+    if keyboard_inputs.pressed(DOWN_KEY.clone()) {
         camera_translation.y -= 1.0;
     }
 
-    if keyboard_inputs.pressed(LEFT_KEY.clone())
-    {
+    if keyboard_inputs.pressed(LEFT_KEY.clone()) {
         camera_translation.x -= 1.0;
     }
-     
-    if keyboard_inputs.pressed(RIGHT_KEY.clone())
-    {
+
+    if keyboard_inputs.pressed(RIGHT_KEY.clone()) {
         camera_translation.x += 1.0;
     }
 
