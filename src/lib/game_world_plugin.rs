@@ -5,7 +5,6 @@ use bevy::{
     color::Color,
     ecs::{
         children,
-        component::Component,
         schedule::IntoScheduleConfigs,
         system::{Commands, ResMut},
     },
@@ -15,10 +14,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::buildings::{self, plugins::init_buildings};
-
-#[derive(Component)]
-pub struct Ground;
+use crate::{buildings::{self, plugins::init_buildings}, ground::Ground};
 
 pub struct GameWorldPlugin;
 
@@ -43,7 +39,7 @@ fn init_ground(
 
     commands.spawn((
         Ground,
-        Transform::default(),
+        Transform::from_translation(Vec3::ZERO),
         Visibility::Visible,
         children![(
             Mesh2d(mesh),

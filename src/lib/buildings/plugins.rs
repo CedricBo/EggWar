@@ -1,6 +1,6 @@
 use bevy::{mesh::RectangleMeshBuilder, prelude::*};
 
-use crate::buildings::building::{Building, BuildingType};
+use crate::{buildings::building::{Building, BuildingType}, ground::Ground};
 
 #[derive(Message)]
 pub struct PlaceBuilding {
@@ -62,7 +62,10 @@ fn place_buildings(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
     mut place_buildings_reader: MessageReader<PlaceBuilding>,
+    ground: Single<&GlobalTransform, With<Ground>>
 ) {
+    let ground_translation = ground.translation();
+
     for place_building in place_buildings_reader.read() {
         let building = Building::from(place_building.building_type.clone());
 
@@ -74,7 +77,7 @@ fn place_buildings(
 
         commands.spawn((
             Visibility::Visible,
-            Transform::from_translation(Vec3::new(0.0, height / 2.0, 0.0)),
+            Transform::from_translation(ground_translation + Vec3::new(0.0, height / 2.0, 0.0)),
             children![(
                 building,
                 children![(

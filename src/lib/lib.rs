@@ -3,6 +3,7 @@ use bevy::app::App;
 pub mod buildings;
 pub mod camera_plugin;
 pub mod game_plugin;
+pub mod ground;
 
 pub fn run() {
     let mut app = App::new();
