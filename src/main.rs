@@ -1,5 +1,5 @@
-use lib::run;
+use lib;
 
 fn main() {
-    run();
+    lib::run();
 }
