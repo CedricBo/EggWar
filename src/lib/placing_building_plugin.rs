@@ -1,17 +1,26 @@
+use crate::buildings::building::BuildingType;
 use bevy::{
-    app::{Plugin, Update}, camera::Camera, color::Color, ecs::{
+    app::{Plugin, Update},
+    camera::Camera,
+    color::Color,
+    ecs::{
         component::Component,
         query::With,
         schedule::{IntoScheduleConfigs, SystemCondition, common_conditions::resource_changed},
-        system::{Commands, Res, ResMut, Single},
-    }, gizmos::gizmos::Gizmos, input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton}, math::{Isometry2d, Vec2, Vec3Swizzles}, state::{
+        system::{Commands, Query, Res, ResMut, Single},
+    },
+    gizmos::gizmos::Gizmos,
+    input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
+    math::{Isometry2d, Vec2, Vec3Swizzles},
+    state::{
         app::AppExtStates,
         condition::in_state,
         state::{NextState, OnExit, State, States},
         state_scoped::DespawnOnEnter,
-    }, transform::components::{GlobalTransform, Transform}, window::Window
+    },
+    transform::components::{GlobalTransform, Transform},
+    window::Window,
 };
-use crate::buildings::building::BuildingType;
 
 use crate::{buildings::building::Building, ground::Ground};
 
@@ -96,7 +105,7 @@ fn move_placeholder(
     camera_query: Single<(&Camera, &GlobalTransform)>,
     window: Single<&Window>,
     mut placeholder: Single<&mut Transform, With<Placeholder>>,
-    ground: Single<&GlobalTransform, With<Ground>>
+    ground: Single<&GlobalTransform, With<Ground>>,
 ) {
     let (camera, camera_transform) = *camera_query;
 
@@ -111,15 +120,34 @@ fn move_placeholder(
 
 fn draw_placeholder_gizmos(
     mut gizmos: Gizmos,
-    placeholder: Single<&Transform, With<Placeholder>>,
-    state: Res<State<SelectedBuildingToPlace>>
-)
-{
-    if let SelectedBuildingToPlace::Selected(btype) = *state.get()
-    {
+    placeholder: Single<&GlobalTransform, With<Placeholder>>,
+    state: Res<State<SelectedBuildingToPlace>>,
+    buildings: Query<(&Building, &GlobalTransform)>,
+) {
+    if let SelectedBuildingToPlace::Selected(btype) = *state.get() {
         let size = Building::size_for_type(btype);
-        
-        gizmos.rect_2d(Isometry2d::from_translation(placeholder.translation.xy()), Vec2::new(size.0,size.1), Color::linear_rgb(1.0, 0.0, 0.0));
-    }
 
+        let intersect = buildings
+            .iter()
+            .any(|item| is_intersect_building(placeholder.translation().x, size.0, item));
+
+
+        let color = match intersect {
+            true => Color::linear_rgb(1.0, 0.0, 0.0),
+            false => Color::linear_rgb(0.0, 1.0, 0.0),
+        };
+
+        gizmos.rect_2d(
+            Isometry2d::from_translation(placeholder.translation().xy()),
+            Vec2::new(size.0, size.1),
+            color,
+        );
+    }
+}
+
+fn is_intersect_building(position: f32, size: f32, building_and_transform: (&Building, &GlobalTransform)) -> bool {
+    let building_position = building_and_transform.1.translation().x;
+    let building_size = building_and_transform.0.size().0;
+
+    (building_position - position).abs() < (size + building_size) / 2.0   
 }
