@@ -1,11 +1,13 @@
-use crate::buildings::building::BuildingType;
+use crate::{buildings::{building::BuildingType, plugins::PlaceBuilding}, ground::Ground};
 use bevy::{
     app::{Plugin, Update},
     camera::Camera,
     color::Color,
     ecs::{
         component::Component,
-        query::With,
+        entity::Entity,
+        message::MessageWriter,
+        query::{With, Without},
         schedule::{IntoScheduleConfigs, SystemCondition, common_conditions::resource_changed},
         system::{Commands, Query, Res, ResMut, Single},
     },
@@ -22,7 +24,7 @@ use bevy::{
     window::Window,
 };
 
-use crate::{buildings::building::Building, ground::Ground};
+use crate::buildings::building::Building;
 
 pub struct PlacingBuildingPlugin;
 
@@ -35,6 +37,9 @@ enum SelectedBuildingToPlace {
 #[derive(Component)]
 struct Placeholder;
 
+#[derive(Component)]
+struct PlaceholderCollision;
+
 impl Plugin for PlacingBuildingPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.insert_state(SelectedBuildingToPlace::None);
@@ -46,19 +51,23 @@ impl Plugin for PlacingBuildingPlugin {
         );
 
         app.add_systems(OnExit(SelectedBuildingToPlace::None), create_placeholder);
-
         app.add_systems(
             Update,
-            move_placeholder.run_if(
-                in_state(SelectedBuildingToPlace::Selected(BuildingType::Garden))
-                    .or(in_state(SelectedBuildingToPlace::Selected(
-                        BuildingType::Grange,
-                    )))
-                    .or(in_state(SelectedBuildingToPlace::Selected(
-                        BuildingType::Turret,
-                    ))),
-            ),
+            (update_placeholder, place_building_on_click)
+                .chain()
+                .after(create_placeholder)
+                .run_if(
+                    in_state(SelectedBuildingToPlace::Selected(BuildingType::Garden))
+                        .or(in_state(SelectedBuildingToPlace::Selected(
+                            BuildingType::Grange,
+                        )))
+                        .or(in_state(SelectedBuildingToPlace::Selected(
+                            BuildingType::Turret,
+                        ))),
+                ),
         );
+
+        app.register_system(update_placeholder);
 
         app.add_systems(Update, draw_placeholder_gizmos);
     }
@@ -84,7 +93,7 @@ fn change_selected_building_with_keyboard(
     if keyboard_inputs.just_pressed(KeyCode::Escape)
         || mouse_inputs.just_pressed(MouseButton::Right)
     {
-        selected.set(SelectedBuildingToPlace::None);
+        selected.set_if_neq(SelectedBuildingToPlace::None);
     }
 }
 
@@ -92,62 +101,98 @@ fn print_selected_on_change(state: Res<State<SelectedBuildingToPlace>>) {
     println!("{:?}", state);
 }
 
-fn create_placeholder(mut command: Commands) {
-    println!("Create placeholder");
+fn create_placeholder(
+    mut command: Commands,) {
+
     command.spawn((
-        Transform::default(),
+        Transform::from_xyz(0.0, 0.0, 0.0),
         Placeholder,
         DespawnOnEnter(SelectedBuildingToPlace::None),
     ));
+
+    command.run_system_cached(update_placeholder);
 }
 
-fn move_placeholder(
+fn update_placeholder(
     camera_query: Single<(&Camera, &GlobalTransform)>,
     window: Single<&Window>,
-    mut placeholder: Single<&mut Transform, With<Placeholder>>,
-    ground: Single<&GlobalTransform, With<Ground>>,
+    mut commands: Commands,
+    placeholder_query: Single<(Entity, &mut Transform), With<Placeholder>>,
+    ground_query: Single<&GlobalTransform, With<Ground>>,
+    buildings: Query<(&Building, &GlobalTransform)>,
+    state: Res<State<SelectedBuildingToPlace>>,
 ) {
     let (camera, camera_transform) = *camera_query;
+    let (entity, mut placeholder_transform) = placeholder_query.into_inner();
 
     if let Some(cursor_position) = window.cursor_position()
-        // Calculate a world position based on the cursor's position.
         && let Ok(cursor_world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_position)
+        && let SelectedBuildingToPlace::Selected(btype) = **state
     {
-        placeholder.translation.x = cursor_world_pos.x;
-        placeholder.translation.y = ground.translation().y;
+        placeholder_transform.translation.x = cursor_world_pos.x;
+        
+        let size = Building::size_for_type(btype);
+
+        placeholder_transform.translation.y = ground_query.translation().y + (size.1 / 2.0);
+        
+        let intersect = buildings
+            .iter()
+            .any(|item| is_intersect_building(placeholder_transform.translation.x, size.0, item));
+
+        let mut placeholder_entity = commands.entity(entity);
+
+        if intersect {
+            placeholder_entity.insert_if_new(PlaceholderCollision);
+        } else {
+            placeholder_entity.remove::<PlaceholderCollision>();
+        }
+    }
+}
+
+fn place_building_on_click(
+    mouse_inputs: Res<ButtonInput<MouseButton>>,
+    state: Res<State<SelectedBuildingToPlace>>,
+    mut place_building_writer: MessageWriter<PlaceBuilding>,
+    placeholder: Single<&Transform, (With<Placeholder>, Without<PlaceholderCollision>)>,
+) {
+    if mouse_inputs.just_pressed(MouseButton::Left)
+        && let SelectedBuildingToPlace::Selected(building_type) = **state
+    {
+        place_building_writer.write(PlaceBuilding {
+            building_type,
+            x: placeholder.translation.x,
+        });
     }
 }
 
 fn draw_placeholder_gizmos(
     mut gizmos: Gizmos,
-    placeholder: Single<&GlobalTransform, With<Placeholder>>,
+    placeholder: Single<(Entity, &Transform, Option<&PlaceholderCollision>), With<Placeholder>>,
     state: Res<State<SelectedBuildingToPlace>>,
-    buildings: Query<(&Building, &GlobalTransform)>,
 ) {
     if let SelectedBuildingToPlace::Selected(btype) = *state.get() {
         let size = Building::size_for_type(btype);
 
-        let intersect = buildings
-            .iter()
-            .any(|item| is_intersect_building(placeholder.translation().x, size.0, item));
-
-
-        let color = match intersect {
-            true => Color::linear_rgb(1.0, 0.0, 0.0),
-            false => Color::linear_rgb(0.0, 1.0, 0.0),
+        let color = match placeholder.2 {
+            Some(_) => Color::linear_rgb(1.0, 0.0, 0.0),
+            None => Color::linear_rgb(0.0, 1.0, 0.0),
         };
 
         gizmos.rect_2d(
-            Isometry2d::from_translation(placeholder.translation().xy()),
+            Isometry2d::from_translation(placeholder.1.translation.xy()),
             Vec2::new(size.0, size.1),
             color,
         );
     }
 }
 
-fn is_intersect_building(position: f32, size: f32, building_and_transform: (&Building, &GlobalTransform)) -> bool {
+fn is_intersect_building(
+    position: f32,
+    size: f32,
+    building_and_transform: (&Building, &GlobalTransform),
+) -> bool {
     let building_position = building_and_transform.1.translation().x;
     let building_size = building_and_transform.0.size().0;
 
-    (building_position - position).abs() < (size + building_size) / 2.0   
+    (building_position - position).abs() <= (size + building_size) / 2.0
 }

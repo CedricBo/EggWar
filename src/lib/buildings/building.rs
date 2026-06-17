@@ -15,30 +15,6 @@ pub enum BuildingType {
 }
 
 impl Building {
-    pub fn grange() -> Self {
-        Self {
-            width: 100.0,
-            height: 100.0,
-            path: "./grange.png".into(),
-        }
-    }
-
-    pub fn garden() -> Self {
-        Self {
-            width: 100.0,
-            height: 35.0,
-            path: "./garden.png".into(),
-        }
-    }
-
-    pub fn turret() -> Self {
-        Self {
-            width: 20.0,
-            height: 40.0,
-            path: "./turret.png".into(),
-        }
-    }
-
     pub fn size(&self) -> (f32, f32) {
         (self.width, self.height)
     }

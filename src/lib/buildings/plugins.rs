@@ -4,8 +4,8 @@ use crate::{buildings::building::{Building, BuildingType}, ground::Ground};
 
 #[derive(Message)]
 pub struct PlaceBuilding {
-    building_type: BuildingType,
-    x: f32,
+    pub building_type: BuildingType,
+    pub x: f32,
 }
 
 pub struct BuildingsPlugin;
