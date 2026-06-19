@@ -1,2 +1,2 @@
 pub mod building;
-pub mod plugins;
+pub mod plugin;

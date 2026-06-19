@@ -14,7 +14,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::{buildings::{self, plugins::init_buildings}, ground::Ground};
+use crate::{buildings::{self, plugin::init_buildings}, ground::Ground};
 
 pub struct GameWorldPlugin;
 
@@ -22,7 +22,7 @@ impl Plugin for GameWorldPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_systems(Startup, init_ground.before(init_buildings));
 
-        app.add_plugins(buildings::plugins::BuildingsPlugin);
+        app.add_plugins(buildings::plugin::BuildingsPlugin);
     }
 }
 

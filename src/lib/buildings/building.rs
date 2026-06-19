@@ -5,6 +5,7 @@ pub struct Building {
     width: f32,
     height: f32,
     path: String,
+    building_type: BuildingType
 }
 
 #[derive(Clone, Copy, Hash, Debug, Eq, PartialEq)]
@@ -17,6 +18,11 @@ pub enum BuildingType {
 impl Building {
     pub fn size(&self) -> (f32, f32) {
         (self.width, self.height)
+    }
+
+    pub fn building_type(&self) -> BuildingType 
+    {
+        self.building_type
     }
 
     pub fn asset_path(&self) -> &str {
@@ -49,6 +55,7 @@ impl From<BuildingType> for Building {
             width: size.0,
             height: size.1,
             path: path.into(),
+            building_type: value
         }
     }
 }
