@@ -7,7 +7,7 @@ use bevy::{
         query::With,
         system::{Commands, Res, Single},
     },
-    input::{ButtonInput, keyboard::Key},
+    input::{ButtonInput, keyboard::KeyCode},
     transform::components::Transform,
 };
 
@@ -26,15 +26,15 @@ fn init_camera(mut commands: Commands) {
 }
 
 fn move_camera(
-    keyboard_inputs: Res<ButtonInput<Key>>,
+    keyboard_inputs: Res<ButtonInput<KeyCode>>,
     mut camera_transform: Single<&mut Transform, With<Camera2d>>,
 ) {
     let mut camera_translation = camera_transform.translation;
 
-    static UP_KEY: LazyLock<Key> = LazyLock::new(|| Key::Character("z".into()));
-    static DOWN_KEY: LazyLock<Key> = LazyLock::new(|| Key::Character("s".into()));
-    static LEFT_KEY: LazyLock<Key> = LazyLock::new(|| Key::Character("q".into()));
-    static RIGHT_KEY: LazyLock<Key> = LazyLock::new(|| Key::Character("d".into()));
+    static UP_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyW);
+    static DOWN_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyS);
+    static LEFT_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyA);
+    static RIGHT_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyD);
 
     if keyboard_inputs.pressed(UP_KEY.clone()) {
         camera_translation.y += 1.0;
