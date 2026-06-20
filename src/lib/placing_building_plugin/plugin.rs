@@ -20,7 +20,7 @@ use bevy::{
             IntoScheduleConfigs, SystemCondition,
             common_conditions::{resource_added, resource_changed, resource_removed},
         },
-        system::{Commands, Local, Query, Res, ResMut, Single},
+        system::{Commands, Query, Res, ResMut, Single},
     },
     gizmos::gizmos::Gizmos,
     input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
