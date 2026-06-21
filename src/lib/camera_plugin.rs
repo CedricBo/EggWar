@@ -1,15 +1,9 @@
-use std::sync::LazyLock;
+use std::{ops::Add, sync::LazyLock};
 
 use bevy::{
-    app::{Plugin, Startup, Update},
-    camera::Camera2d,
-    ecs::{
-        query::With,
-        system::{Res, Single},
-    },
-    input::{ButtonInput, keyboard::KeyCode},
-    scene::{SceneList, SpawnListSystem, bsn_list},
-    transform::components::Transform,
+    app::{Plugin, Startup, Update}, camera::{Camera, Camera2d, Projection}, ecs::{
+        message::MessageReader, query::With, schedule::{IntoScheduleConfigs, common_conditions::on_message}, system::Single
+    }, input::mouse::MouseWheel, math::{IVec2, Vec2}, scene::{SceneList, SpawnListSystem, bsn_list}
 };
 
 pub struct CameraPlugin;
@@ -18,7 +12,7 @@ impl Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_systems(Startup, scene.spawn());
 
-        app.add_systems(Update, move_camera);
+        app.add_systems(Update, zoom_camera.run_if(on_message::<MouseWheel>));
     }
 }
 
@@ -26,32 +20,20 @@ fn scene() -> impl SceneList {
     bsn_list![Camera2d]
 }
 
-fn move_camera(
-    keyboard_inputs: Res<ButtonInput<KeyCode>>,
-    mut camera_transform: Single<&mut Transform, With<Camera2d>>,
+fn zoom_camera(
+    mut mouse_wheel_reader: MessageReader<MouseWheel>,
+    mut projection: Single<&mut Projection, With<Camera>>,
 ) {
-    let mut camera_translation = camera_transform.translation;
+    let total: f32 = mouse_wheel_reader.read().map(|event| event.y).sum();
 
-    static UP_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyW);
-    static DOWN_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyS);
-    static LEFT_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyA);
-    static RIGHT_KEY: LazyLock<KeyCode> = LazyLock::new(|| KeyCode::KeyD);
-
-    if keyboard_inputs.pressed(UP_KEY.clone()) {
-        camera_translation.y += 1.0;
-    }
-
-    if keyboard_inputs.pressed(DOWN_KEY.clone()) {
-        camera_translation.y -= 1.0;
-    }
-
-    if keyboard_inputs.pressed(LEFT_KEY.clone()) {
-        camera_translation.x -= 1.0;
-    }
-
-    if keyboard_inputs.pressed(RIGHT_KEY.clone()) {
-        camera_translation.x += 1.0;
-    }
-
-    camera_transform.translation = camera_translation;
+    match **projection
+    {
+        Projection::Orthographic(ref mut orthographic_projection) => {
+            let clamped = (orthographic_projection.scale + (total / 10.0)).clamp(0.1, 3.0);
+            
+            orthographic_projection.scale = clamped;
+            println!("scale: {}", orthographic_projection.scale);
+        },
+        _ => {},
+    };
 }
