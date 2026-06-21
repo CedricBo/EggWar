@@ -1,9 +1,7 @@
 use bevy::{mesh::RectangleMeshBuilder, prelude::*};
 
 use crate::{
-    buildings::building::{Building, BuildingType},
-    ground::Ground,
-    placing_building_plugin::states::InPlacing,
+    buildings::building::{Building, BuildingType}, core::components::{Blockable, Size}, ground::Ground, placing_building_plugin::states::InPlacing
 };
 
 #[derive(Message)]
@@ -92,6 +90,8 @@ fn place_buildings(
         commands
             .spawn((
                 Visibility::Visible,
+                Size(size),
+                Blockable,
                 building,
                 children![(
                     Mesh2d(mesh),

@@ -1,9 +1,8 @@
 use crate::{
-    buildings::{building::BuildingType, plugin::PlaceBuilding},
-    placing_building_plugin::{
+    buildings::{building::BuildingType, plugin::PlaceBuilding}, core::utils::is_intersect, placing_building_plugin::{
         messages::OnInPlacingStart,
         states::{InPlacing, SelectedBuildingToPlace},
-    },
+    }
 };
 
 use bevy::{
@@ -23,7 +22,7 @@ use bevy::{
     },
     gizmos::gizmos::Gizmos,
     input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton},
-    math::{Isometry2d, Vec2, Vec3Swizzles},
+    math::{Isometry2d, Vec3Swizzles},
     state::{
         app::AppExtStates,
         condition::in_state,
@@ -129,7 +128,6 @@ fn update_placeholder(
     window: Single<&Window>,
     mut commands: Commands,
     placeholder_query: Single<(Entity, &mut Transform), With<Placeholder>>,
-    // ground_query: Single<&GlobalTransform, With<Ground>>,
     buildings: Query<(&Building, &GlobalTransform)>,
     state: Res<State<SelectedBuildingToPlace>>,
 ) {
@@ -194,15 +192,4 @@ fn draw_placeholder_gizmos(
             color,
         );
     }
-}
-
-fn is_intersect(a: (Vec2, Vec2), b: (Vec2, Vec2)) -> bool {
-    let (a_pos, a_size) = a;
-    let (b_pos, b_size) = b;
-
-    let sub = (a_pos - b_pos).abs();
-
-    let size = (a_size + b_size) / 2.0;
-
-    (sub.x <= size.x) && (sub.y <= size.y)
 }

@@ -1,8 +1,9 @@
 use bevy::{
     app::{App, PluginGroup},
-    image::ImageSamplerDescriptor,
     picking::mesh_picking::MeshPickingPlugin,
 };
+
+pub mod core;
 
 pub mod buildings;
 pub mod camera_plugin;
