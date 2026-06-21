@@ -5,9 +5,10 @@ use bevy::{
     camera::Camera2d,
     ecs::{
         query::With,
-        system::{Commands, Res, Single},
+        system::{Res, Single},
     },
     input::{ButtonInput, keyboard::KeyCode},
+    scene::{SceneList, SpawnListSystem, bsn_list},
     transform::components::Transform,
 };
 
@@ -15,14 +16,14 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.add_systems(Startup, init_camera);
+        app.add_systems(Startup, scene.spawn());
 
         app.add_systems(Update, move_camera);
     }
 }
 
-fn init_camera(mut commands: Commands) {
-    commands.spawn(Camera2d);
+fn scene() -> impl SceneList {
+    bsn_list![Camera2d]
 }
 
 fn move_camera(
