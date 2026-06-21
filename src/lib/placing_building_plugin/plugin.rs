@@ -1,6 +1,5 @@
 use crate::{
     buildings::{building::BuildingType, plugin::PlaceBuilding},
-    ground::Ground,
     placing_building_plugin::{
         messages::OnInPlacingStart,
         states::{InPlacing, SelectedBuildingToPlace},
@@ -57,7 +56,8 @@ impl Plugin for PlacingBuildingPlugin {
             (
                 print_selected_on_change.run_if(resource_changed::<State<SelectedBuildingToPlace>>),
                 print_in_placing_on_change.run_if(
-                    resource_added::<State<InPlacing>>.or(resource_removed::<State<InPlacing>>),
+                    resource_added::<State<InPlacing>>
+                        .or_else(resource_removed::<State<InPlacing>>),
                 ),
             ),
         );
@@ -73,8 +73,6 @@ impl Plugin for PlacingBuildingPlugin {
                 .after(create_placeholder)
                 .run_if(in_state(InPlacing)),
         );
-
-        // app.register_system(update_placeholder);
 
         app.add_systems(Update, draw_placeholder_gizmos);
     }
@@ -131,7 +129,7 @@ fn update_placeholder(
     window: Single<&Window>,
     mut commands: Commands,
     placeholder_query: Single<(Entity, &mut Transform), With<Placeholder>>,
-    ground_query: Single<&GlobalTransform, With<Ground>>,
+    // ground_query: Single<&GlobalTransform, With<Ground>>,
     buildings: Query<(&Building, &GlobalTransform)>,
     state: Res<State<SelectedBuildingToPlace>>,
 ) {
@@ -143,14 +141,13 @@ fn update_placeholder(
         && let SelectedBuildingToPlace::Selected(btype) = **state
     {
         placeholder_transform.translation.x = cursor_world_pos.x;
+        placeholder_transform.translation.y = cursor_world_pos.y;
 
-        let size = Building::size_for_type(btype);
-
-        placeholder_transform.translation.y = ground_query.translation().y + (size.1 / 2.0);
+        let placeholder_size = Building::size_for_type(btype);
 
         let intersect = buildings
             .iter()
-            .any(|item| is_intersect_building(placeholder_transform.translation.x, size.0, item));
+            .any(|item| is_intersect((placeholder_transform.translation.xy(), placeholder_size), (item.1.translation().xy(), item.0.size())));
 
         let mut placeholder_entity = commands.entity(entity);
 
@@ -173,7 +170,7 @@ fn place_building_on_click(
     {
         place_building_writer.write(PlaceBuilding {
             building_type,
-            x: placeholder.translation.x,
+            position: placeholder.translation.xy(),
         });
     }
 }
@@ -193,19 +190,19 @@ fn draw_placeholder_gizmos(
 
         gizmos.rect_2d(
             Isometry2d::from_translation(placeholder.1.translation.xy()),
-            Vec2::new(size.0, size.1),
+            size,
             color,
         );
     }
 }
 
-fn is_intersect_building(
-    position: f32,
-    size: f32,
-    building_and_transform: (&Building, &GlobalTransform),
-) -> bool {
-    let building_position = building_and_transform.1.translation().x;
-    let building_size = building_and_transform.0.size().0;
+fn is_intersect(a: (Vec2, Vec2), b: (Vec2, Vec2)) -> bool {
+    let (a_pos, a_size) = a;
+    let (b_pos, b_size) = b;
 
-    (building_position - position).abs() <= (size + building_size) / 2.0
+    let sub = (a_pos - b_pos).abs();
+
+    let size = (a_size + b_size) / 2.0;
+
+    (sub.x <= size.x) && (sub.y <= size.y)
 }

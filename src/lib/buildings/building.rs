@@ -1,9 +1,8 @@
-use bevy::ecs::component::Component;
+use bevy::{ecs::component::Component, math::Vec2};
 
 #[derive(Component)]
 pub struct Building {
-    width: f32,
-    height: f32,
+    size: Vec2,
     path: String,
     building_type: BuildingType
 }
@@ -16,8 +15,8 @@ pub enum BuildingType {
 }
 
 impl Building {
-    pub fn size(&self) -> (f32, f32) {
-        (self.width, self.height)
+    pub fn size(&self) -> Vec2 {
+        self.size
     }
 
     pub fn building_type(&self) -> BuildingType 
@@ -29,12 +28,12 @@ impl Building {
         &self.path
     }
 
-    pub fn size_for_type(btype: BuildingType) -> (f32, f32) {
+    pub fn size_for_type(btype: BuildingType) -> Vec2 {
         match btype {
             BuildingType::Grange => (100.0, 100.0),
             BuildingType::Garden => (100.0, 35.0),
             BuildingType::Turret => (20.0, 40.0),
-        }
+        }.into()
     }
 
     pub fn path_for_type(btype: BuildingType) -> &'static str {
@@ -52,8 +51,7 @@ impl From<BuildingType> for Building {
         let path = Self::path_for_type(value.clone());
 
         Self {
-            width: size.0,
-            height: size.1,
+            size,
             path: path.into(),
             building_type: value
         }

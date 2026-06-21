@@ -9,7 +9,7 @@ use crate::{
 #[derive(Message)]
 pub struct PlaceBuilding {
     pub building_type: BuildingType,
-    pub x: f32,
+    pub position: Vec2,
 }
 
 #[derive(Component)]
@@ -33,14 +33,20 @@ fn gizmos(mut gizmos: Gizmos, buildings: Query<(&GlobalTransform, &Building, Opt
     gizmos.circle_2d(Isometry2d::default(), 5.0, Color::linear_rgb(0.0, 1.0, 0.0));
 
     for (transform, building, selected) in buildings.iter() {
-        let (width, height) = building.size();
+        let size = building.size();
         gizmos.rect_2d(
             Isometry2d::from_translation(transform.translation().xy()),
-            Vec2::new(width, height),
+            Vec2::new(size.x, size.y),
             match selected {
                 Some(_) => Color::linear_rgb(0.0, 1.0, 0.0),
                 None => Color::linear_rgb(0.0, 0.0, 1.0),
             },
+        );
+
+        gizmos.circle_2d(
+            Isometry2d::from_translation(transform.translation().xy()),
+            5.0,
+            Color::linear_rgb(1.0, 1.0, 0.0),
         );
     }
 }
@@ -48,22 +54,22 @@ fn gizmos(mut gizmos: Gizmos, buildings: Query<(&GlobalTransform, &Building, Opt
 pub fn init_buildings(mut place_building_writer: MessageWriter<PlaceBuilding>) {
     place_building_writer.write(PlaceBuilding {
         building_type: BuildingType::Grange,
-        x: -50.0,
+        position: (-50.0, 100.0).into(),
     });
 
     place_building_writer.write(PlaceBuilding {
         building_type: BuildingType::Grange,
-        x: 200.0,
+        position: (200.0, 0.0).into(),
     });
 
     place_building_writer.write(PlaceBuilding {
         building_type: BuildingType::Garden,
-        x: -250.0,
+        position: (-250.0, 0.0).into(),
     });
 
     place_building_writer.write(PlaceBuilding {
         building_type: BuildingType::Turret,
-        x: 350.0,
+        position: (350.0, -150.0).into(),
     });
 }
 
@@ -73,71 +79,52 @@ fn place_buildings(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
     mut place_buildings_reader: MessageReader<PlaceBuilding>,
-    ground: Single<&GlobalTransform, With<Ground>>,
 ) {
-    let ground_translation = ground.translation();
-
     for place_building in place_buildings_reader.read() {
         let building = Building::from(place_building.building_type.clone());
 
-        let (width, height) = building.size();
+        let size = building.size();
         let path: String = building.asset_path().into();
 
-        let mesh = meshes.add(RectangleMeshBuilder::new(width, height));
+        let mesh = meshes.add(RectangleMeshBuilder::new(size.x, size.y));
         let material = materials.add(Color::linear_rgb(0.0, 0.0, 0.0));
 
         commands
             .spawn((
                 Visibility::Visible,
-                Transform::from_translation(ground_translation + Vec3::new(0.0, height / 2.0, 0.0)),
+                building,
                 children![(
-                    building,
-                    children![(
-                        Mesh2d(mesh),
-                        MeshMaterial2d(material),
-                        Transform::from_translation(-Vec3::Z)
-                    )],
-                    Transform::from_translation(Vec3::new(place_building.x, 0.0, 0.0)),
-                    Sprite::from_image(asset_server.load(path)),
+                    Mesh2d(mesh),
+                    MeshMaterial2d(material),
+                    Transform::from_translation(-Vec3::Z)
                 )],
+                Transform::from_translation(place_building.position.extend(0.0)),
+                Sprite::from_image(asset_server.load(path)),
             ))
-            .observe(on_click_building);
+            .observe(on_click_building.run_if(not(in_state(InPlacing))));
     }
 }
 
 fn on_click_building(
     click: On<Pointer<Click>>,
-    childrens: Query<&Children>,
     selected: Option<Single<Entity, With<Selected>>>,
     mut commands: Commands,
-    in_placing_state: Option<Res<State<InPlacing>>>,
 ) {
-    if click.button == PointerButton::Primary
-        && let None = in_placing_state
-    {
+    if click.button == PointerButton::Primary {
         if let Some(selected) = selected
             && let Ok(mut entity_command) = commands.get_entity(*selected)
         {
             entity_command.remove::<Selected>();
         }
 
-        if let Ok(childs) = childrens.get(click.entity)
-            && let Some(child) = childs.first()
-        {
-            if let Ok(mut entity_command) = commands.get_entity(*child) {
-                entity_command.insert_if_new(Selected);
-            }
+        if let Ok(mut entity_command) = commands.get_entity(click.entity) {
+            entity_command.insert_if_new(Selected);
         }
     }
 }
 
-fn deselect_on_right_click(
-    mouse_button: Res<ButtonInput<MouseButton>>,
-    mut commands: Commands
-)
-{
-    if mouse_button.just_pressed(MouseButton::Right)
-    {
+fn deselect_on_right_click(mouse_button: Res<ButtonInput<MouseButton>>, mut commands: Commands) {
+    if mouse_button.just_pressed(MouseButton::Right) {
         commands.run_system_cached(unselect_building);
     }
 }
