@@ -1,7 +1,10 @@
 use bevy::{mesh::RectangleMeshBuilder, prelude::*};
 
 use crate::{
-    buildings::building::{Building, BuildingType}, core::components::{Blockable, Size}, ground::Ground, placing_building_plugin::states::InPlacing
+    buildings::building::{Building, BuildingComponent, BuildingType},
+    core::components::{Blockable, Size},
+    ground::Ground,
+    placing_building_plugin::states::InPlacing,
 };
 
 #[derive(Message)]
@@ -12,6 +15,9 @@ pub struct PlaceBuilding {
 
 #[derive(Component)]
 struct Selected;
+
+#[derive(Component)]
+pub struct StandMarker;
 
 pub struct BuildingsPlugin;
 
@@ -27,7 +33,10 @@ impl Plugin for BuildingsPlugin {
     }
 }
 
-fn gizmos(mut gizmos: Gizmos, buildings: Query<(&GlobalTransform, &Building, Option<&Selected>)>) {
+fn gizmos(
+    mut gizmos: Gizmos,
+    buildings: Query<(&GlobalTransform, &BuildingComponent, Option<&Selected>)>,
+) {
     gizmos.circle_2d(Isometry2d::default(), 5.0, Color::linear_rgb(0.0, 1.0, 0.0));
 
     for (transform, building, selected) in buildings.iter() {
@@ -56,18 +65,13 @@ pub fn init_buildings(mut place_building_writer: MessageWriter<PlaceBuilding>) {
     });
 
     place_building_writer.write(PlaceBuilding {
-        building_type: BuildingType::Grange,
-        position: (200.0, 0.0).into(),
-    });
-
-    place_building_writer.write(PlaceBuilding {
         building_type: BuildingType::Garden,
         position: (-250.0, 0.0).into(),
     });
 
     place_building_writer.write(PlaceBuilding {
-        building_type: BuildingType::Turret,
-        position: (350.0, -150.0).into(),
+        building_type: BuildingType::Stand,
+        position: (350.0, 150.0).into(),
     });
 }
 
@@ -78,27 +82,21 @@ fn place_buildings(
     asset_server: Res<AssetServer>,
     mut place_buildings_reader: MessageReader<PlaceBuilding>,
 ) {
-    for place_building in place_buildings_reader.read() {
-        let building = Building::from(place_building.building_type.clone());
+    for PlaceBuilding {
+        building_type,
+        position,
+    } in place_buildings_reader.read()
+    {
+        let path: String = BuildingComponent::path_for_type(*building_type).into();
 
-        let size = building.size();
-        let path: String = building.asset_path().into();
+        let mut entity_command = commands.spawn_empty();
 
-        let mesh = meshes.add(RectangleMeshBuilder::new(size.x, size.y));
-        let material = materials.add(Color::linear_rgb(0.0, 0.0, 0.0));
+        BuildingComponent::spawn_type(*building_type, &mut entity_command);
 
-        commands
-            .spawn((
+        entity_command
+            .insert((
                 Visibility::Visible,
-                Size(size),
-                Blockable,
-                building,
-                children![(
-                    Mesh2d(mesh),
-                    MeshMaterial2d(material),
-                    Transform::from_translation(-Vec3::Z)
-                )],
-                Transform::from_translation(place_building.position.extend(0.0)),
+                Transform::from_translation(position.extend(0.0)),
                 Sprite::from_image(asset_server.load(path)),
             ))
             .observe(on_click_building.run_if(not(in_state(InPlacing))));

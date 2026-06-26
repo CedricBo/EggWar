@@ -32,7 +32,6 @@ fn zoom_camera(
             let clamped = (orthographic_projection.scale + (total / 10.0)).clamp(0.1, 3.0);
             
             orthographic_projection.scale = clamped;
-            println!("scale: {}", orthographic_projection.scale);
         },
         _ => {},
     };

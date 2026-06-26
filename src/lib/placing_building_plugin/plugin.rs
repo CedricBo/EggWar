@@ -33,7 +33,7 @@ use bevy::{
     window::Window,
 };
 
-use crate::buildings::building::Building;
+use crate::buildings::building::BuildingComponent;
 
 pub struct PlacingBuildingPlugin;
 
@@ -91,7 +91,7 @@ fn change_selected_building_with_keyboard(
     }
 
     if keyboard_inputs.just_pressed(KeyCode::Digit3) {
-        selected.set(SelectedBuildingToPlace::Selected(BuildingType::Turret));
+        selected.set(SelectedBuildingToPlace::Selected(BuildingType::Stand));
     }
 
     if keyboard_inputs.just_pressed(KeyCode::Escape)
@@ -128,7 +128,7 @@ fn update_placeholder(
     window: Single<&Window>,
     mut commands: Commands,
     placeholder_query: Single<(Entity, &mut Transform), With<Placeholder>>,
-    buildings: Query<(&Building, &GlobalTransform)>,
+    buildings: Query<(&BuildingComponent, &GlobalTransform)>,
     state: Res<State<SelectedBuildingToPlace>>,
 ) {
     let (camera, camera_transform) = *camera_query;
@@ -141,7 +141,7 @@ fn update_placeholder(
         placeholder_transform.translation.x = cursor_world_pos.x;
         placeholder_transform.translation.y = cursor_world_pos.y;
 
-        let placeholder_size = Building::size_for_type(btype);
+        let placeholder_size = BuildingComponent::size_for_type(btype);
 
         let intersect = buildings
             .iter()
@@ -179,7 +179,7 @@ fn draw_placeholder_gizmos(
     state: Res<State<SelectedBuildingToPlace>>,
 ) {
     if let SelectedBuildingToPlace::Selected(btype) = *state.get() {
-        let size = Building::size_for_type(btype);
+        let size = BuildingComponent::size_for_type(btype);
 
         let color = match placeholder.2 {
             Some(_) => Color::linear_rgb(1.0, 0.0, 0.0),

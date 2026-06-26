@@ -1,59 +1,84 @@
-use bevy::{ecs::component::Component, math::Vec2};
+use bevy::{
+    ecs::{bundle::Bundle, component::Component, system::EntityCommands}, math::Vec2,
+};
+
+use crate::{buildings::garden::GardenComponent, core::components::{Blockable, Size}};
 
 #[derive(Component)]
-pub struct Building {
+pub struct BuildingComponent {
     size: Vec2,
-    path: String,
-    building_type: BuildingType
+    building_type: BuildingType,
 }
 
 #[derive(Clone, Copy, Hash, Debug, Eq, PartialEq)]
 pub enum BuildingType {
     Grange,
     Garden,
-    Turret,
+    Stand,
 }
 
-impl Building {
+#[derive(Bundle)]
+pub struct Building {
+    building_component: BuildingComponent,
+    blockable: Blockable,
+}
+
+impl BuildingComponent {
     pub fn size(&self) -> Vec2 {
         self.size
     }
 
-    pub fn building_type(&self) -> BuildingType 
-    {
+    pub fn building_type(&self) -> BuildingType {
         self.building_type
-    }
-
-    pub fn asset_path(&self) -> &str {
-        &self.path
     }
 
     pub fn size_for_type(btype: BuildingType) -> Vec2 {
         match btype {
             BuildingType::Grange => (100.0, 100.0),
-            BuildingType::Garden => (100.0, 35.0),
-            BuildingType::Turret => (20.0, 40.0),
-        }.into()
+            BuildingType::Garden => (150.0, 35.0),
+            BuildingType::Stand => (100.0, 60.0),
+        }
+        .into()
     }
 
     pub fn path_for_type(btype: BuildingType) -> &'static str {
         match btype {
             BuildingType::Grange => "./grange.png",
             BuildingType::Garden => "./garden.png",
-            BuildingType::Turret => "./turret.png",
+            BuildingType::Stand => "./stand.png",
         }
+    }
+
+    pub fn spawn_type(btype: BuildingType, entity_command: &mut EntityCommands) {
+        match btype {
+            BuildingType::Grange => {
+
+            },
+            BuildingType::Garden => {
+                entity_command.insert(GardenComponent);
+            },
+            BuildingType::Stand => {
+
+            },
+        };
+
+        let building = BuildingComponent::from(btype);
+
+        entity_command.insert((
+            Size(building.size.clone()),
+            Blockable,
+            building,
+        ));
     }
 }
 
-impl From<BuildingType> for Building {
+impl From<BuildingType> for BuildingComponent {
     fn from(value: BuildingType) -> Self {
         let size = Self::size_for_type(value.clone());
-        let path = Self::path_for_type(value.clone());
 
         Self {
             size,
-            path: path.into(),
-            building_type: value
+            building_type: value,
         }
     }
 }
