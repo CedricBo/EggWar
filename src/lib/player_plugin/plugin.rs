@@ -1,25 +1,14 @@
 use std::ops::Deref;
 
 use bevy::{
-    app::{Plugin, Startup, Update},
-    asset::{AssetServer, Assets},
-    camera::Camera2d,
-    color::Color,
-    ecs::{
+    app::{Plugin, Startup, Update}, asset::{AssetServer, Assets}, camera::Camera2d, color::Color, ecs::{
         component::Component,
         query::{With, Without},
         schedule::IntoScheduleConfigs,
         system::{Commands, Query, Res, ResMut, Single},
-    },
-    gizmos::gizmos::Gizmos,
-    image::{
+    }, gizmos::gizmos::Gizmos, image::{
         ImageLoaderSettings, ImageSampler, TextureAtlas, TextureAtlasBuilder, TextureAtlasLayout,
-    },
-    input::{ButtonInput, keyboard::KeyCode},
-    math::{Isometry2d, UVec2, Vec2, Vec3Swizzles},
-    sprite::Sprite,
-    time::{Time, Timer},
-    transform::components::Transform,
+    }, input::{ButtonInput, keyboard::KeyCode}, math::{Isometry2d, UVec2, Vec2, Vec3Swizzles, VectorSpace}, sprite::Sprite, time::{Time, Timer}, transform::components::Transform,
 };
 
 use crate::core::{
@@ -27,16 +16,18 @@ use crate::core::{
     utils::is_intersect,
 };
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Default)]
 enum Direction {
     TOP,
+    #[default]
     DOWN,
     LEFT,
     RIGHT,
 }
 
-#[derive(Clone)]
-enum PlayerMovement {
+#[derive(Clone, Default, Eq, PartialEq)]
+enum PlayerState {
+    #[default]
     Idle,
     Walking,
 }
@@ -53,10 +44,11 @@ struct PlayerAtlases {
 }
 
 #[derive(Component)]
-#[require(Size = Size::from(Vec2::new(48.0, 64.0)))]
+#[require(Size = Size::from(Vec2::new(48.0, 60.0)))]
 struct Player {
     direction: Direction,
-    movement: PlayerMovement,
+    state: PlayerState,
+    movement: Vec2,
     atlases: PlayerAtlases,
     animation_timer: Timer,
     current_atlas_range: AtlasRange
@@ -72,6 +64,7 @@ impl Plugin for PlayerPlugin {
             Update,
             (
                 move_player_with_keyboard,
+                player_collision,
                 update_player_sprite,
                 attach_camera_to_player,
                 draw_gizmos,
@@ -137,10 +130,11 @@ fn create_player(
         Transform::default(),
         Player {
             direction: Direction::DOWN,
-            movement: PlayerMovement::Idle,
+            state: PlayerState::Idle,
             current_atlas_range: player_atlases.idle.down.clone(),
             atlases: player_atlases,
             animation_timer: Timer::from_seconds(1.0 / 6.0, bevy::time::TimerMode::Repeating),
+            movement: Vec2::ZERO
         },
     ));
 }
@@ -154,18 +148,16 @@ fn attach_camera_to_player(
 
 fn move_player_with_keyboard(
     keyboard_inputs: Res<ButtonInput<KeyCode>>,
-    player: Single<(&mut Transform, &Size, &mut Player)>,
-    blockable: Query<(&Size, &Transform), (With<Blockable>, Without<Player>)>,
+    mut player: Single<&mut Player>,
 ) {    
     const UP_KEY: KeyCode = KeyCode::KeyW;
     const DOWN_KEY: KeyCode = KeyCode::KeyS;
     const LEFT_KEY: KeyCode = KeyCode::KeyA;
     const RIGHT_KEY: KeyCode = KeyCode::KeyD;
     
-    let (mut transform, size, mut player) = player.into_inner();
     let mut movement = Vec2::ZERO;
     let mut new_direction: Option<Direction> = None;
-   
+
     if keyboard_inputs.pressed(UP_KEY) {
         movement.y += 1.0;
         new_direction = Some(Direction::TOP);
@@ -186,16 +178,18 @@ fn move_player_with_keyboard(
         new_direction = Some(Direction::RIGHT);
     }
 
-    player.movement = match movement != Vec2::ZERO {
-        true => PlayerMovement::Walking,
-        false => PlayerMovement::Idle,
+    let new_state = match movement != Vec2::ZERO {
+        true => PlayerState::Walking,
+        false => PlayerState::Idle,
     };
 
-    if let Some(new_direction) = new_direction && new_direction != player.direction
+    let new_direction = new_direction.unwrap_or(player.direction.clone());
+
+    if new_direction != player.direction || new_state != player.state
     {
-        let atlases = match player.movement {
-            PlayerMovement::Idle => &player.atlases.idle,
-            PlayerMovement::Walking => &player.atlases.walking,
+        let atlases = match new_state {
+            PlayerState::Idle => &player.atlases.idle,
+            PlayerState::Walking => &player.atlases.walking,
         };
 
         let range = match new_direction {
@@ -207,9 +201,21 @@ fn move_player_with_keyboard(
 
         player.current_atlas_range = range.clone();
         player.direction = new_direction;
+        player.state = new_state;
         player.animation_timer.almost_finish();
     }
 
+    player.movement = movement;
+}
+
+fn player_collision(
+    player: Single<(&mut Transform, &Size, &mut Player)>,
+    blockable: Query<(&Size, &Transform), (With<Blockable>, Without<Player>)>,
+)
+{
+    let (mut transform, size, player) = player.into_inner();
+    let mut movement   = player.movement;
+    
     if movement != Vec2::ZERO {
         let future_translation = transform.translation.xy() + movement;
 

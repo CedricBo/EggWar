@@ -24,7 +24,7 @@ fn zoom_camera(
     mut mouse_wheel_reader: MessageReader<MouseWheel>,
     mut projection: Single<&mut Projection, With<Camera>>,
 ) {
-    let total: f32 = mouse_wheel_reader.read().map(|event| event.y).sum();
+    let total: f32 = mouse_wheel_reader.read().map(|event| -event.y).sum();
 
     match **projection
     {
