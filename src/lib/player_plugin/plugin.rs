@@ -1,14 +1,25 @@
 use std::ops::Deref;
 
 use bevy::{
-    app::{Plugin, Startup, Update}, asset::{AssetServer, Assets}, camera::Camera2d, color::Color, ecs::{
+    app::{Plugin, Startup, Update},
+    asset::{AssetServer, Assets},
+    camera::Camera2d,
+    color::Color,
+    ecs::{
         component::Component,
         query::{With, Without},
         schedule::IntoScheduleConfigs,
         system::{Commands, Query, Res, ResMut, Single},
-    }, gizmos::gizmos::Gizmos, image::{
+    },
+    gizmos::gizmos::Gizmos,
+    image::{
         ImageLoaderSettings, ImageSampler, TextureAtlas, TextureAtlasBuilder, TextureAtlasLayout,
-    }, input::{ButtonInput, keyboard::KeyCode}, math::{Isometry2d, UVec2, Vec2, Vec3Swizzles, VectorSpace}, sprite::Sprite, time::{Time, Timer}, transform::components::Transform,
+    },
+    input::{ButtonInput, keyboard::KeyCode},
+    math::{Isometry2d, UVec2, Vec2, Vec3Swizzles, VectorSpace},
+    sprite::Sprite,
+    time::{Time, Timer},
+    transform::components::Transform,
 };
 
 use crate::core::{
@@ -51,7 +62,7 @@ struct Player {
     movement: Vec2,
     atlases: PlayerAtlases,
     animation_timer: Timer,
-    current_atlas_range: AtlasRange
+    current_atlas_range: AtlasRange,
 }
 
 pub struct PlayerPlugin;
@@ -67,7 +78,7 @@ impl Plugin for PlayerPlugin {
                 player_collision,
                 update_player_sprite,
                 attach_camera_to_player,
-                draw_gizmos,
+                // draw_gizmos,
             )
                 .chain(),
         );
@@ -134,8 +145,9 @@ fn create_player(
             current_atlas_range: player_atlases.idle.down.clone(),
             atlases: player_atlases,
             animation_timer: Timer::from_seconds(1.0 / 6.0, bevy::time::TimerMode::Repeating),
-            movement: Vec2::ZERO
+            movement: Vec2::ZERO,
         },
+        Blockable,
     ));
 }
 
@@ -149,32 +161,32 @@ fn attach_camera_to_player(
 fn move_player_with_keyboard(
     keyboard_inputs: Res<ButtonInput<KeyCode>>,
     mut player: Single<&mut Player>,
-) {    
+) {
     const UP_KEY: KeyCode = KeyCode::KeyW;
     const DOWN_KEY: KeyCode = KeyCode::KeyS;
     const LEFT_KEY: KeyCode = KeyCode::KeyA;
     const RIGHT_KEY: KeyCode = KeyCode::KeyD;
-    
+
     let mut movement = Vec2::ZERO;
     let mut new_direction: Option<Direction> = None;
 
     if keyboard_inputs.pressed(UP_KEY) {
-        movement.y += 1.0;
+        movement.y += 3.0;
         new_direction = Some(Direction::TOP);
     }
 
     if keyboard_inputs.pressed(DOWN_KEY) {
-        movement.y -= 1.0;
+        movement.y -= 3.0;
         new_direction = Some(Direction::DOWN);
     }
 
     if keyboard_inputs.pressed(LEFT_KEY) {
-        movement.x -= 1.0;
+        movement.x -= 3.0;
         new_direction = Some(Direction::LEFT);
     }
 
     if keyboard_inputs.pressed(RIGHT_KEY) {
-        movement.x += 1.0;
+        movement.x += 3.0;
         new_direction = Some(Direction::RIGHT);
     }
 
@@ -185,8 +197,7 @@ fn move_player_with_keyboard(
 
     let new_direction = new_direction.unwrap_or(player.direction.clone());
 
-    if new_direction != player.direction || new_state != player.state
-    {
+    if new_direction != player.direction || new_state != player.state {
         let atlases = match new_state {
             PlayerState::Idle => &player.atlases.idle,
             PlayerState::Walking => &player.atlases.walking,
@@ -211,11 +222,10 @@ fn move_player_with_keyboard(
 fn player_collision(
     player: Single<(&mut Transform, &Size, &mut Player)>,
     blockable: Query<(&Size, &Transform), (With<Blockable>, Without<Player>)>,
-)
-{
+) {
     let (mut transform, size, player) = player.into_inner();
-    let mut movement   = player.movement;
-    
+    let mut movement = player.movement;
+
     if movement != Vec2::ZERO {
         let future_translation = transform.translation.xy() + movement;
 
@@ -232,10 +242,15 @@ fn player_collision(
                 .find(|movement| {
                     let future_translation = transform.translation.xy() + *movement;
 
-                    !is_intersect(
+                    !(is_intersect(
                         (future_translation, size.into()),
                         (intersected.1.translation.xy(), intersected.0.into()),
-                    )
+                    ) || blockable.iter().any(|(bsize, transform)| {
+                        is_intersect(
+                            (future_translation, size.into()),
+                            (transform.translation.xy(), bsize.into()),
+                        )
+                    }))
                 });
 
             if let Some(resolved_movement) = resolved_movement {
@@ -272,7 +287,6 @@ fn update_player_sprite(player: Single<(&mut Sprite, &mut Player)>, time: Res<Ti
     };
 
     player.animation_timer.tick(time.delta());
-
 
     if player.animation_timer.is_finished() {
         let range = &player.current_atlas_range;

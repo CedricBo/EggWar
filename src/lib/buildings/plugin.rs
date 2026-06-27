@@ -1,9 +1,8 @@
 use bevy::{mesh::RectangleMeshBuilder, prelude::*};
 
 use crate::{
-    buildings::building::{Building, BuildingComponent, BuildingType},
-    core::components::{Blockable, Size},
-    ground::Ground,
+    buildings::building::{BuildingComponent, BuildingType},
+    core::components::Size,
     placing_building_plugin::states::InPlacing,
 };
 
@@ -35,15 +34,14 @@ impl Plugin for BuildingsPlugin {
 
 fn gizmos(
     mut gizmos: Gizmos,
-    buildings: Query<(&GlobalTransform, &BuildingComponent, Option<&Selected>)>,
+    buildings: Query<(&GlobalTransform, &Size, Option<&Selected>), With<BuildingComponent>>,
 ) {
     gizmos.circle_2d(Isometry2d::default(), 5.0, Color::linear_rgb(0.0, 1.0, 0.0));
 
-    for (transform, building, selected) in buildings.iter() {
-        let size = building.size();
+    for (transform, size, selected) in buildings.iter() {
         gizmos.rect_2d(
             Isometry2d::from_translation(transform.translation().xy()),
-            Vec2::new(size.x, size.y),
+            Vec2::new(size.0.x, size.0.y),
             match selected {
                 Some(_) => Color::linear_rgb(0.0, 1.0, 0.0),
                 None => Color::linear_rgb(0.0, 0.0, 1.0),
@@ -77,8 +75,6 @@ pub fn init_buildings(mut place_building_writer: MessageWriter<PlaceBuilding>) {
 
 fn place_buildings(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
     mut place_buildings_reader: MessageReader<PlaceBuilding>,
 ) {

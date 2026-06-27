@@ -1,12 +1,15 @@
 use bevy::{
-    ecs::{bundle::Bundle, component::Component, system::EntityCommands}, math::Vec2,
+    ecs::{bundle::Bundle, component::Component, system::EntityCommands},
+    math::Vec2,
 };
 
-use crate::{buildings::garden::GardenComponent, core::components::{Blockable, Size}};
+use crate::{
+    buildings::garden::GardenComponent,
+    core::components::{Blockable, Size},
+};
 
 #[derive(Component)]
 pub struct BuildingComponent {
-    size: Vec2,
     building_type: BuildingType,
 }
 
@@ -21,13 +24,10 @@ pub enum BuildingType {
 pub struct Building {
     building_component: BuildingComponent,
     blockable: Blockable,
+    size: Size,
 }
 
 impl BuildingComponent {
-    pub fn size(&self) -> Vec2 {
-        self.size
-    }
-
     pub fn building_type(&self) -> BuildingType {
         self.building_type
     }
@@ -51,33 +51,23 @@ impl BuildingComponent {
 
     pub fn spawn_type(btype: BuildingType, entity_command: &mut EntityCommands) {
         match btype {
-            BuildingType::Grange => {
-
-            },
+            BuildingType::Grange => {}
             BuildingType::Garden => {
                 entity_command.insert(GardenComponent);
-            },
-            BuildingType::Stand => {
-
-            },
+            }
+            BuildingType::Stand => {}
         };
 
         let building = BuildingComponent::from(btype);
+        let size = Self::size_for_type(btype.clone());
 
-        entity_command.insert((
-            Size(building.size.clone()),
-            Blockable,
-            building,
-        ));
+        entity_command.insert((Size(size), Blockable, building));
     }
 }
 
 impl From<BuildingType> for BuildingComponent {
     fn from(value: BuildingType) -> Self {
-        let size = Self::size_for_type(value.clone());
-
         Self {
-            size,
             building_type: value,
         }
     }

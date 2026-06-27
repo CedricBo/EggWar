@@ -1,4 +1,4 @@
-use bevy::{ecs::component::Component, math::{UVec2, Vec2}, transform::components::Transform};
+use bevy::{ecs::component::Component, math::Vec2, transform::components::Transform};
 
 #[derive(Component, Default)]
 pub struct Size(pub Vec2);
@@ -20,8 +20,7 @@ impl From<Vec2> for Size {
 pub struct Blockable;
 
 #[derive(Component, Clone)]
-pub struct AtlasRange
-{
+pub struct AtlasRange {
     pub first: usize,
     pub last: usize,
 }

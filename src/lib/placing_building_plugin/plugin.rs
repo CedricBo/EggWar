@@ -1,8 +1,16 @@
 use crate::{
-    buildings::{building::BuildingType, plugin::PlaceBuilding}, core::utils::is_intersect, placing_building_plugin::{
+    buildings::{
+        building::{Building, BuildingType},
+        plugin::PlaceBuilding,
+    },
+    core::{
+        components::{Blockable, Size},
+        utils::is_intersect,
+    },
+    placing_building_plugin::{
         messages::OnInPlacingStart,
         states::{InPlacing, SelectedBuildingToPlace},
-    }
+    },
 };
 
 use bevy::{
@@ -128,7 +136,7 @@ fn update_placeholder(
     window: Single<&Window>,
     mut commands: Commands,
     placeholder_query: Single<(Entity, &mut Transform), With<Placeholder>>,
-    buildings: Query<(&BuildingComponent, &GlobalTransform)>,
+    blockable: Query<(&Size, &GlobalTransform), With<Blockable>>,
     state: Res<State<SelectedBuildingToPlace>>,
 ) {
     let (camera, camera_transform) = *camera_query;
@@ -143,9 +151,12 @@ fn update_placeholder(
 
         let placeholder_size = BuildingComponent::size_for_type(btype);
 
-        let intersect = buildings
-            .iter()
-            .any(|item| is_intersect((placeholder_transform.translation.xy(), placeholder_size), (item.1.translation().xy(), item.0.size())));
+        let intersect = blockable.iter().any(|(size, transform)| {
+            is_intersect(
+                (placeholder_transform.translation.xy(), placeholder_size),
+                (transform.translation().xy(), size.0),
+            )
+        });
 
         let mut placeholder_entity = commands.entity(entity);
 
