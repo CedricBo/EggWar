@@ -1,9 +1,14 @@
-use std::{ops::Add, sync::LazyLock};
-
 use bevy::{
-    app::{Plugin, Startup, Update}, camera::{Camera, Camera2d, Projection}, ecs::{
-        message::MessageReader, query::With, schedule::{IntoScheduleConfigs, common_conditions::on_message}, system::Single
-    }, input::mouse::MouseWheel, math::{IVec2, Vec2}, scene::{SceneList, SpawnListSystem, bsn_list}
+    app::{Plugin, Startup, Update},
+    camera::{Camera, Camera2d, Projection},
+    ecs::{
+        message::MessageReader,
+        query::With,
+        schedule::{IntoScheduleConfigs, common_conditions::on_message},
+        system::Single,
+    },
+    input::mouse::MouseWheel,
+    scene::{Scene, SpawnSystem, bsn},
 };
 
 pub struct CameraPlugin;
@@ -16,8 +21,10 @@ impl Plugin for CameraPlugin {
     }
 }
 
-fn scene() -> impl SceneList {
-    bsn_list![Camera2d]
+fn scene() -> impl Scene {
+    bsn! {
+        Camera2d
+    }
 }
 
 fn zoom_camera(
@@ -26,13 +33,12 @@ fn zoom_camera(
 ) {
     let total: f32 = mouse_wheel_reader.read().map(|event| -event.y).sum();
 
-    match **projection
-    {
+    match **projection {
         Projection::Orthographic(ref mut orthographic_projection) => {
             let clamped = (orthographic_projection.scale + (total / 10.0)).clamp(0.1, 3.0);
-            
+
             orthographic_projection.scale = clamped;
-        },
-        _ => {},
+        }
+        _ => {}
     };
 }

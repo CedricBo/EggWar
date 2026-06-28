@@ -1,6 +1,8 @@
 use bevy::{
     app::{Plugin, Update},
-    ecs::message::MessageReader, state::state::OnEnter,
+    diagnostic::FrameCount,
+    ecs::{message::MessageReader, system::Res},
+    state::state::OnEnter,
 };
 
 use crate::placing_building_plugin::{self, messages::OnInPlacingStart, states::InPlacing};
@@ -20,12 +22,15 @@ impl Plugin for GamePlugin {
     }
 }
 
-fn on_in_placing_start_by_message(mut message_reader: MessageReader<OnInPlacingStart>) {
+fn on_in_placing_start_by_message(
+    mut message_reader: MessageReader<OnInPlacingStart>,
+    frame: Res<FrameCount>,
+) {
     for _message in message_reader.read() {
-        println!("OnInPlacingStart by message");
+        println!("OnInPlacingStart by message at frame {}", frame.0);
     }
 }
 
-fn on_in_placing_start_by_state() {
-    println!("OnInPlacingStart by state");
+fn on_in_placing_start_by_state(frame: Res<FrameCount>) {
+    println!("OnInPlacingStart by state at frame {}", frame.0);
 }

@@ -17,7 +17,9 @@ use bevy::{
     app::{Plugin, Update},
     camera::Camera,
     color::Color,
+    diagnostic::FrameCount,
     ecs::{
+        change_detection::DetectChanges,
         component::Component,
         entity::Entity,
         message::MessageWriter,
@@ -58,16 +60,6 @@ impl Plugin for PlacingBuildingPlugin {
         app.add_message::<OnInPlacingStart>();
 
         app.add_systems(Update, change_selected_building_with_keyboard);
-        app.add_systems(
-            Update,
-            (
-                print_selected_on_change.run_if(resource_changed::<State<SelectedBuildingToPlace>>),
-                print_in_placing_on_change.run_if(
-                    resource_added::<State<InPlacing>>
-                        .or_else(resource_removed::<State<InPlacing>>),
-                ),
-            ),
-        );
 
         app.add_systems(
             OnEnter(InPlacing),
@@ -89,6 +81,7 @@ fn change_selected_building_with_keyboard(
     keyboard_inputs: Res<ButtonInput<KeyCode>>,
     mouse_inputs: Res<ButtonInput<MouseButton>>,
     mut selected: ResMut<NextState<SelectedBuildingToPlace>>,
+    frame: Res<FrameCount>,
 ) {
     if keyboard_inputs.just_pressed(KeyCode::Digit1) {
         selected.set(SelectedBuildingToPlace::Selected(BuildingType::Grange));
@@ -107,18 +100,19 @@ fn change_selected_building_with_keyboard(
     {
         selected.set_if_neq(SelectedBuildingToPlace::None);
     }
+
+    if selected.is_changed() {
+        println!("Change selected at frame {}", frame.0);
+    }
 }
 
-fn emit_start_placing_message(mut message_writer: MessageWriter<OnInPlacingStart>) {
+fn emit_start_placing_message(
+    mut message_writer: MessageWriter<OnInPlacingStart>,
+    frame: Res<FrameCount>,
+) {
     message_writer.write(OnInPlacingStart);
-}
 
-fn print_selected_on_change(state: Res<State<SelectedBuildingToPlace>>) {
-    println!("Selected: {:?}", state);
-}
-
-fn print_in_placing_on_change(state: Option<Res<State<InPlacing>>>) {
-    println!("InPlace: {:?}", state);
+    println!("Emit OnPlacingStart at frame {}", frame.0);
 }
 
 fn create_placeholder(mut command: Commands) {
